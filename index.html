@@ -1,0 +1,207 @@
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <title>Intro to MapView - Create a 2D map | Sample | ArcGIS Maps SDK for JavaScript 4.29</title>
+    <style>
+      html,
+      body {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+      }
+     #header {  
+            height: 50px;  
+            background-color: #99FFFF;  
+            display: flex;  
+            align-items: center; /* 垂直居中 */  
+            justify-content: center; /* 水平居中 */  
+            padding: 0 10px; /* 添加内边距以容纳按钮 */  
+            font-weight: bold; /* 加粗文字 */
+        }  
+        #header h1 {  
+            margin: 0; /* 移除标题默认的边距 */  
+        }  
+      #mapArea {
+        height: 83%;
+      }
+      #basemapGallery {
+        height: 15%;
+        background-color: #ccffcc;
+        padding: 20px;
+        font-weight: bold; /* 加粗文字 */
+      }
+	 
+	  
+      #viewDiv {
+        height: 100%;
+      }
+    </style>
+
+    <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
+    <script src="https://js.arcgis.com/4.29/"></script>
+
+    <script>
+      require([
+  "esri/Map",
+  "esri/views/MapView",
+  "esri/widgets/BasemapGallery",
+  "esri/widgets/ScaleBar",
+  "esri/widgets/Legend",
+  "esri/widgets/Search",
+  "esri/widgets/LayerList",
+  "esri/layers/FeatureLayer",
+  "esri/geometry/geometryEngine",
+  "esri/geometry/Polyline"
+], (Map, MapView, BasemapGallery, ScaleBar, Legend, Search, LayerList, FeatureLayer, geometryEngine, Polyline) => {
+        const map = new Map({
+          basemap: "topo-vector"
+        });
+
+        const view = new MapView({
+          container: "viewDiv",
+          map: map,
+          zoom: 5,
+          center: [-95.7129, 37.0902] // 设置初始位置为美国
+        });
+
+        // 添加比例尺微件
+        let scaleBar = new ScaleBar({
+          view: view,
+          unit: "metric" // 使用公制
+        });
+        view.ui.add(scaleBar, {
+          position: "bottom-left"
+        });
+
+        // 添加图例微件
+        let legend = new Legend({
+          view: view
+        });
+        view.ui.add(legend, "bottom-right");
+
+        // 添加搜索框微件
+        let searchWidget = new Search({
+          view: view
+        });
+        view.ui.add(searchWidget, {
+          position: "top-right"
+        });
+
+        // 添加图层列表微件
+        let layerList = new LayerList({
+          view: view
+        });
+        view.ui.add(layerList, "bottom-right");
+
+        // 添加要素图层
+        let featureLayer1 = new FeatureLayer({
+          url: "https://www.geosceneonline.cn/server/rest/services/Hosted/Incidents19/FeatureServer",
+
+        });
+          map.add(featureLayer1);
+
+      
+
+        // 添加底图库微件
+        let basemapGallery = new BasemapGallery({
+          view: view,
+          container: document.createElement("div")
+        });
+        document.getElementById("basemapGallery").appendChild(basemapGallery.container);
+        
+	//包括2000年和2007年的人口数量，以及每平方英里的人口密度
+		var template = { // autocasts as new PopupTemplate()
+		title: "U.S. Census Data",
+		content: [{
+		type: "fields",
+		fieldInfos: [{
+        fieldName: "POP2000",
+        label: "Population (2000)",
+        visible: true
+      }, {
+        fieldName: "POP2007",
+        label: "Population (2007)",
+        visible: true
+      }, {
+        fieldName: "POP00_SQMI",
+        label: "Population per Sq. Mile (2000)",
+        visible: true
+      }, {
+        fieldName: "POP07_SQMI",
+        label: "Population per Sq. Mile (2007)",
+        visible: true
+      }]
+    }]
+  };
+	//包括2000年和2007年的人口数量，以及每平方英里的人口密度
+	var featureLayer2 = new FeatureLayer({
+		url: "https://sampleserver6.arcgisonline.com/arcgis/rest/services/Census/MapServer/3",
+		outFields: ["*"],
+		popupTemplate: template
+		});
+
+  map.add(featureLayer2);
+
+  
+ 
+    var measureBtn = document.getElementById("measureBtn");
+        var resetBtn = document.getElementById("resetBtn");
+        var measuring = false;
+        var startPoint = null;
+
+        measureBtn.addEventListener("click", function(){
+          measuring = true;
+        });
+
+        resetBtn.addEventListener("click", function(){
+          measuring = false;
+          startPoint = null;
+          view.graphics.removeAll();
+        });
+
+        view.on("click", function(event){
+          if (!measuring) return;
+
+          if (!startPoint) {
+            startPoint = event.mapPoint;
+          } else {
+            // 创建一个新的折线
+            var polyline = new Polyline({
+              paths: [
+                [startPoint.longitude, startPoint.latitude],
+                [event.mapPoint.longitude, event.mapPoint.latitude]
+              ],
+              spatialReference: { wkid: 4326 }
+            });
+
+            // 计算折线的长度
+            var length = geometryEngine.geodesicLength(polyline, "kilometers");
+
+            // 显示长度
+            alert("距离为：" + length.toFixed(2) + " 公里");
+
+            // 重置起点
+            startPoint = null;
+          }
+        });
+      
+  
+      
+        
+      });
+    </script>
+  </head>
+
+  <body>
+    <div id="header">CHP基于ArcGIS API for JavaScript构建WebGIS应用学习</div>
+    <div id="mapArea">
+	<button id="measureBtn">开始测量</button>
+    <button id="resetBtn">重置</button>
+      <div id="viewDiv"></div>
+    </div>
+    <div id="basemapGallery">底图库</div>
+    
+  </body>
+</html>
